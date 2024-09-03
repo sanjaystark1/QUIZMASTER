@@ -1,0 +1,76 @@
+//  User Authentication 
+
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const User = require('./models/User'); // MongoDB User model
+
+const app = express();
+app.use(express.json());
+
+// User Registration
+app.post('/register', async (req, res) => {
+  const { username, password, role } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = new User({ username, password: hashedPassword, role });
+  await user.save();
+  res.status(201).send('User registered');
+});
+
+// User Login
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  const user = await User.findOne({ username });
+  if (!user || !await bcrypt.compare(password, user.password)) {
+    return res.status(401).send('Invalid credentials');
+  }
+  const token = jwt.sign({ userId: user._id, role: user.role }, 'secret-key');
+  res.json({ token });
+});
+
+app.listen(3000, () => console.log('Server running on port 3000'));
+// Backend: Node.js (Express) - Assessment Management Example
+
+const Assessment = require('./models/Assessment'); // MongoDB Assessment model
+
+// Create Assessment
+app.post('/assessments', async (req, res) => {
+  const { title, description, questions } = req.body;
+  const assessment = new Assessment({ title, description, questions });
+  await assessment.save();
+  res.status(201).send('Assessment created');
+});
+
+// Get All Assessments
+app.get('/assessments', async (req, res) => {
+  const assessments = await Assessment.find();
+  res.json(assessments);
+});
+//React - Assessment Delivery
+
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+function Assessment({ assessmentId }) {
+  const [assessment, setAssessment] = useState(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
+  useEffect(() => {
+    axios.get(`/assessments/${assessmentId}`).then(response => setAssessment(response.data));
+  }, [assessmentId]);
+
+  if (!assessment) return <div>Loading...</div>;
+
+  const currentQuestion = assessment.questions[currentQuestionIndex];
+
+  return (
+    <div>
+      <h1>{assessment.title}</h1>
+      <div>{currentQuestion.text}</div>
+      {/* Render question options and next button here */}
+    </div>
+  );
+}
+
+export default Assessment;
+
